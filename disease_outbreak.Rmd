@@ -1,0 +1,76 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(stringr)
+library(corrplot)
+library(RColorBrewer)
+```
+
+
+
+```{r}
+
+outbreak <- read.csv("E:/datasets/Outbreak_240817.csv", header = T, stringsAsFactors = F)
+str(outbreak)
+
+```
+```{r}
+
+na_count <- sapply(outbreak, function(x) sum(length(which(is.na(x)))))
+na_count <- data.frame(na_count)
+na_count
+```
+Fill NAs by zero as all NA cols are stat figures
+
+```{r}
+outbreak[is.na(outbreak)] <- 0
+```
+
+```{r}
+head(outbreak)
+```
+Seaparate species description in region and species
+
+```{r}
+separate(data = outbreak, col = speciesDescription, into = c("Region", "Species"), sep = "\\,")
+```
+Let's first take a look at country wise disease count
+
+```{r}
+disease_count <- outbreak%>% select(disease)%>%
+  group_by(disease)%>%
+  summarise(disease_count = n())%>%
+  mutate(perct = round((disease_count/sum(disease_count)*100), digits = 2))
+
+top_disease <- top_n(disease_count, 10)
+
+
+country_disease <- outbreak %>% select(country, disease)%>%
+  group_by(country, disease)%>%
+  summarise(Counts= n())%>%
+  mutate(perct = round((Counts/sum(Counts)*100), digits = 2))%>%
+  arrange(country, disease)
+
+```
+Lets visualize count plots
+```{r fig.height=7, fig.width=12}
+ggplot(disease_count, aes(x=reorder(disease,disease_count), y=disease_count))+
+  geom_col(fill="royalblue1")+
+  coord_flip()+
+  theme(panel.background = element_rect(fill="white",colour = "black"))+
+  theme(plot.background = element_rect(fill = "palegreen", color = "black"))+
+  theme(panel.grid.major = element_line(colour = "aquamarine"))+
+  theme(axis.text.y = element_text(face = "bold", size = 11))+
+  scale_y_continuous(breaks = c(seq(from=0, to=max(disease_count$disease_count), by= 1000)))
+
+```
+
+analyse top 5 diseases countrywise
+
+```{r fig.height=45, fig.width=12}
+
+
